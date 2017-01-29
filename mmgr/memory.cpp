@@ -2,6 +2,7 @@
 #include "module.h"
 
 #include <vector>
+#include <algorithm>
 
 using namespace mmgr;
 using namespace std;
@@ -11,6 +12,9 @@ const SYS_INFO memory::sys_info = [] {
     GetSystemInfo(&sys_info);
     return sys_info;
 }(); 
+
+const pointer memory::beginning = memory::sys_info.lpMinimumApplicationAddress;
+const pointer memory::ending = memory::sys_info.lpMaximumApplicationAddress;
 
 memory::memory() :
     memory(
@@ -48,7 +52,8 @@ vector<memory> memory::regions() {
             base_end = max_ptr;
 
         if(mi.AllocationProtect != 0 &&
-           mi.Protect != 0 && mi.Protect != PAGE_NOACCESS) {
+           mi.Protect != 0 && mi.Protect != PAGE_NOACCESS && !(mi.Protect & PAGE_GUARD) &&
+           mi.State == MEM_COMMIT) {
             regions.emplace_back(base, base_end);
         }
 
@@ -70,11 +75,14 @@ inline bool memory::continuous() const {
     return _continuous;
 }
 
+inline bool memory::has(pointer address) const {
+    return _begin >= address && address < _end;
+}
+
 vector<pointer> memory::find(const char *data, size_t length) {
     vector<pointer> matches;
 
     for(auto &&region : regions()) {
-        bool found = true;
         auto p = region.begin();
 
         while(true) {
@@ -82,7 +90,6 @@ vector<pointer> memory::find(const char *data, size_t length) {
                 if(p.value<char>() == *data)
                     break;
             if(p == region.end()) {
-                found = false;
                 break;
             }
             if(!memcmp(p + 1, data + 1, length - 1)) {
@@ -95,19 +102,31 @@ vector<pointer> memory::find(const char *data, size_t length) {
     return matches;
 }
 
-pointer memory::find_single(const char *data, size_t length, bool from_beginning) {
-    int shift = from_beginning ? +1 : -1;
+pointer memory::find_single(const char *data, size_t length, pointer start, direction dir) {
+    int shift = +1;
+    if(dir == backward)
+        shift = -1;
+    
+    auto regs = regions();
+    auto region = lower_bound(
+        regs.begin(),
+        regs.end(),
+        start,
+        [](memory &region, pointer address) -> bool {
+            return region.has(address);
+        }
+    );
 
-    for(auto &&region : regions()) {
+    for(; region != regs.end(); ++region) {
         bool found = true;
         pointer p;
         pointer p_end;
-        if(from_beginning) {
-            p = region.begin();
-            p_end = region.end() - length;
+        if(dir == forward) {
+            p = region->begin();
+            p_end = region->end() - length;
         } else {
-            p = region.end() - length;
-            p_end = region.begin();
+            p = region->end() - length;
+            p_end = region->begin();
         }
 
         while(true) {
@@ -131,15 +150,31 @@ pointer memory::find_single(const char *data, size_t length, bool from_beginning
 }
 
 pointer memory::find_first(const char *data, size_t length) {
-    return find_single(data, length, true);
+    return find_single(data, length);
 }
 
 pointer memory::find_first(const string &str) {
     return find_first(str.c_str(), str.length());
 }
 
+pointer memory::find_next(const char *data, size_t length, pointer start) {
+    return find_single(data, length, start, forward);
+}
+
+pointer memory::find_next(const string &str, pointer start) {
+    return find_single(str.c_str(), str.length(), start, forward);
+}
+
+pointer memory::find_prev(const char *data, size_t length, pointer start) {
+    return find_single(data, length, start, backward);
+}
+
+pointer memory::find_prev(const string &str, pointer start) {
+    return find_single(str.c_str(), str.length(), start, backward);
+}
+
 pointer memory::find_last(const char *data, size_t length) {
-    return find_single(data, length, false);
+    return find_single(data, length, ending, backward);
 }
 
 pointer memory::find_last(const string &str) {
@@ -182,6 +217,31 @@ vector<pointer> memory::find_last_reference(vector<pointer> ptrs) {
     vector<pointer> matches;
     for(auto &&ptr : ptrs)
         matches.push_back(find_last_reference(ptr));
+    return matches;
+}
+
+vector<pointer> memory::find_call_references(pointer func) {
+    const unsigned char asm_instr_call = 0xE8;
+
+    vector<pointer> matches;
+
+    for(auto &&region : regions()) {
+        auto p = region.begin();
+
+        while(true) {
+            for(; p < region.end(); ++p)
+                if(p.value<unsigned char>() == asm_instr_call)
+                    break;
+            if(p == region.end()) {
+                break;
+            }
+            ++p;
+            if(p.value<intptr_t>() == func - p - 5 + 1) { // CALL dest - (src + 5)
+                matches.emplace_back(p);
+            }
+        }
+    }
+
     return matches;
 }
 
