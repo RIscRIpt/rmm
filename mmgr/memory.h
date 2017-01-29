@@ -57,6 +57,8 @@ namespace mmgr {
 
         shared_ptr<::mmgr::module> operator[](const string &name);
 
+        static bool is_valid_address(pointer ptr, size_t size = sizeof(pointer));
+
     protected:
         pointer _begin;
         pointer _end;

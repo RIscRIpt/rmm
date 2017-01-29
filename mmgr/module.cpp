@@ -31,5 +31,5 @@ module::module(const string &name) :
 }
 
 bool module::is_valid() {
-    return begin() != nullptr && end() != nullptr;
+    return begin() != 0 && end() != 0;
 }

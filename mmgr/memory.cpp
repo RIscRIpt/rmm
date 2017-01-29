@@ -31,14 +31,21 @@ vector<memory> memory::regions() {
     MEM_INFO mi;
     vector<memory> regions;
 
-    auto min_ptr = max(begin(), sys_info.lpMinimumApplicationAddress);
-    auto max_ptr = min(end(), sys_info.lpMaximumApplicationAddress);
+    auto min_ptr = begin();
+    if(min_ptr < sys_info.lpMinimumApplicationAddress)
+        min_ptr = sys_info.lpMinimumApplicationAddress;
+
+    auto max_ptr = end();
+    if(max_ptr > sys_info.lpMaximumApplicationAddress)
+        max_ptr = sys_info.lpMaximumApplicationAddress;
 
     for(pointer base = min_ptr; base < max_ptr; ) {
         if(!VirtualQuery(base, &mi, sizeof(mi)))
             throw nullptr;
 
-        auto base_end = min(max_ptr, pointer(mi.BaseAddress) + mi.RegionSize);
+        auto base_end = pointer(mi.BaseAddress) + mi.RegionSize;
+        if(base_end > max_ptr)
+            base_end = max_ptr;
 
         if(mi.AllocationProtect != 0 &&
            mi.Protect != 0 && mi.Protect != PAGE_NOACCESS) {
@@ -78,7 +85,7 @@ vector<pointer> memory::find(const char *data, size_t length) {
                 found = false;
                 break;
             }
-            if(!memcmp((void*)(p + 1), data + 1, length - 1)) {
+            if(!memcmp(p + 1, data + 1, length - 1)) {
                 matches.emplace_back(p);
             }
             ++p;
@@ -111,7 +118,7 @@ pointer memory::find_single(const char *data, size_t length, bool from_beginning
                 found = false;
                 break;
             }
-            if(!memcmp((void*)(p + 1), data + 1, length - 1))
+            if(!memcmp(p + 1, data + 1, length - 1))
                 break;
             p += shift;
         }
@@ -197,4 +204,24 @@ void memory::clean_modules() {
 
 shared_ptr<::mmgr::module> memory::operator[](const string &name) {
     return module(name);
+}
+
+bool memory::is_valid_address(pointer ptr, size_t size) {
+    MEM_INFO mi;
+
+    if(VirtualQuery(ptr, &mi, sizeof(mi)) == 0)
+        return false;
+
+    if(mi.State != MEM_COMMIT)
+        return false;
+
+    if(mi.Protect == PAGE_NOACCESS)
+        return false;
+
+    auto ptr_end = ptr + size;
+    auto reg_end = (uintptr_t)mi.BaseAddress + mi.RegionSize;
+    if(ptr_end > reg_end)
+        return is_valid_address(reg_end, ptr_end - reg_end);
+
+    return true;
 }
