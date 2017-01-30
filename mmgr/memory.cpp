@@ -380,21 +380,26 @@ vector<pointer> memory::find_call_references(pointer func) {
     return matches;
 }
 
+const map<string, shared_ptr<::mmgr::module>> mmgr::memory::modules() {
+    //TODO: enumerate all modules, and save into _modules
+    return _modules;
+}
+
 shared_ptr<::mmgr::module> memory::module(const string &name) {
-    auto mit = modules.find(name);
-    if(mit != modules.end())
+    auto mit = _modules.find(name);
+    if(mit != _modules.end())
         return mit->second;
 
     auto m = make_shared<::module>(name);
     if(!m->is_valid())
         return nullptr;
 
-    modules[name] = m;
+    _modules[name] = m;
     return m;
 }
 
 void memory::clean_modules() {
-    modules.clear();
+    _modules.clear();
 }
 
 shared_ptr<::mmgr::module> memory::operator[](const string &name) {

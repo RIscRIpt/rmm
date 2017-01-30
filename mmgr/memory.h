@@ -76,6 +76,7 @@ namespace mmgr {
 
         vector<pointer> find_call_references(pointer func);
 
+        const map<string, shared_ptr<::mmgr::module>> modules();
         shared_ptr<::mmgr::module> module(const string &name);
 
         void clean_modules();
@@ -97,7 +98,7 @@ namespace mmgr {
     private:
         static const SYS_INFO sys_info;
 
-        map<string, shared_ptr<::mmgr::module>> modules;
+        map<string, shared_ptr<::mmgr::module>> _modules;
     };
 
 }

@@ -10,6 +10,9 @@
     <Filter Include="pointer">
       <UniqueIdentifier>{84e13186-6a19-4db9-bc46-fbc7a0e5ee00}</UniqueIdentifier>
     </Filter>
+    <Filter Include="section">
+      <UniqueIdentifier>{55d7f02b-1453-454e-ac8b-d77e1fcdc7b3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="module.cpp">
@@ -20,6 +23,9 @@
     </ClCompile>
     <ClCompile Include="pointer.cpp">
       <Filter>pointer</Filter>
+    </ClCompile>
+    <ClCompile Include="section.cpp">
+      <Filter>section</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -32,6 +38,9 @@
     </ClInclude>
     <ClInclude Include="pointer.h">
       <Filter>pointer</Filter>
+    </ClInclude>
+    <ClInclude Include="section.h">
+      <Filter>section</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

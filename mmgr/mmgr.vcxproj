@@ -116,11 +116,13 @@
     <ClCompile Include="pointer.cpp" />
     <ClCompile Include="memory.cpp" />
     <ClCompile Include="module.cpp" />
+    <ClCompile Include="section.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pointer.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="module.h" />
+    <ClInclude Include="section.h" />
     <ClInclude Include="typedefs.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
