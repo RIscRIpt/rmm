@@ -19,6 +19,7 @@ namespace mmgr {
     using std::string;
     using std::map;
     using std::shared_ptr;
+    using std::runtime_error;
 
     class module;
 
@@ -56,6 +57,15 @@ namespace mmgr {
         pointer find_last(const char *data, size_t length);
         pointer find_last(const string &str);
 
+        vector<pointer> find_by_pattern(const char *pattern, const char *mask);
+
+        pointer find_single_by_pattern(const char *pattern, const char *mask, pointer start = nullptr, direction dir = forward);
+
+        pointer find_first_by_pattern(const char *pattern, const char *mask);
+        pointer find_next_by_pattern(const char *pattern, const char *mask, pointer start);
+        pointer find_prev_by_pattern(const char *pattern, const char *mask, pointer start);
+        pointer find_last_by_pattern(const char *pattern, const char *mask);
+
         vector<pointer> find_references(pointer ptr);
         pointer find_first_reference(pointer ptr);
         pointer find_last_reference(pointer ptr);
@@ -74,6 +84,11 @@ namespace mmgr {
 
         static bool is_valid_address(pointer ptr, size_t size = sizeof(pointer));
 
+        static size_t pattern_length(const char *pattern, const char *mask);
+        static bool pattern_matches(const char *data, const char *pattern, const char *mask);
+
+        static void redirect_call(pointer dest, pointer src) throw(runtime_error);
+
     protected:
         pointer _begin;
         pointer _end;
@@ -81,8 +96,6 @@ namespace mmgr {
 
     private:
         static const SYS_INFO sys_info;
-        static const pointer beginning;
-        static const pointer ending;
 
         map<string, shared_ptr<::mmgr::module>> modules;
     };

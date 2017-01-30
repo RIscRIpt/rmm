@@ -13,9 +13,6 @@ const SYS_INFO memory::sys_info = [] {
     return sys_info;
 }(); 
 
-const pointer memory::beginning = memory::sys_info.lpMinimumApplicationAddress;
-const pointer memory::ending = memory::sys_info.lpMaximumApplicationAddress;
-
 memory::memory() :
     memory(
         sys_info.lpMinimumApplicationAddress,
@@ -76,7 +73,7 @@ inline bool memory::continuous() const {
 }
 
 inline bool memory::has(pointer address) const {
-    return _begin >= address && address < _end;
+    return _begin <= address && address < _end;
 }
 
 vector<pointer> memory::find(const char *data, size_t length) {
@@ -89,7 +86,7 @@ vector<pointer> memory::find(const char *data, size_t length) {
             for(; p < region.end(); ++p)
                 if(p.value<char>() == *data)
                     break;
-            if(p == region.end()) {
+            if(p + length >= region.end()) {
                 break;
             }
             if(!memcmp(p + 1, data + 1, length - 1)) {
@@ -106,8 +103,17 @@ pointer memory::find_single(const char *data, size_t length, pointer start, dire
     int shift = +1;
     if(dir == backward)
         shift = -1;
+
+    if(start == nullptr) {
+        if(dir == forward)
+            start = begin();
+        else
+            start = end();
+    }
     
     auto regs = regions();
+    if(dir == backward)
+        reverse(regs.begin(), regs.end());
     auto region = lower_bound(
         regs.begin(),
         regs.end(),
@@ -116,6 +122,13 @@ pointer memory::find_single(const char *data, size_t length, pointer start, dire
             return region.has(address);
         }
     );
+    if(region == regs.end())
+        return nullptr;
+
+    if(dir == forward)
+        *region = memory(start, region->end());
+    else
+        *region = memory(region->begin(), start);
 
     for(; region != regs.end(); ++region) {
         bool found = true;
@@ -162,7 +175,7 @@ pointer memory::find_next(const char *data, size_t length, pointer start) {
 }
 
 pointer memory::find_next(const string &str, pointer start) {
-    return find_single(str.c_str(), str.length(), start, forward);
+    return find_next(str.c_str(), str.length(), start);
 }
 
 pointer memory::find_prev(const char *data, size_t length, pointer start) {
@@ -170,16 +183,138 @@ pointer memory::find_prev(const char *data, size_t length, pointer start) {
 }
 
 pointer memory::find_prev(const string &str, pointer start) {
-    return find_single(str.c_str(), str.length(), start, backward);
+    return find_prev(str.c_str(), str.length(), start);
 }
 
 pointer memory::find_last(const char *data, size_t length) {
-    return find_single(data, length, ending, backward);
+    return find_single(data, length, nullptr, backward);
 }
 
 pointer memory::find_last(const string &str) {
     return find_last(str.c_str(), str.length());
 }
+
+vector<pointer> memory::find_by_pattern(const char *pattern, const char *mask) {
+    size_t length;
+    vector<pointer> matches;
+
+    // fix dummy mask (if it begins with 00's)
+    while(*mask == '\x00' && *pattern != '\x00') {
+        mask++;
+        pattern++;
+    }
+    if(*pattern == '\x00' && *mask == '\x00')
+        return matches;
+    length = pattern_length(pattern, mask);
+
+    for(auto &&region : regions()) {
+        auto p = region.begin();
+
+        while(true) {
+            for(; p < region.end(); ++p)
+                if((p.value<char>() & *mask) == *pattern)
+                    break;
+            if(p + length >= region.end()) {
+                break;
+            }
+            if(pattern_matches(p + 1, pattern + 1, mask + 1)) {
+                matches.emplace_back(p);
+            }
+            ++p;
+        }
+    }
+
+    return matches;
+}
+
+pointer memory::find_single_by_pattern(const char *pattern, const char *mask, pointer start, direction dir) {
+    // fix dummy mask (if it begins with 00's)
+    while(*mask == '\x00' && *pattern != '\x00') {
+        mask++;
+        pattern++;
+    }
+    if(*pattern == '\x00' && *mask == '\x00')
+        return nullptr;
+    size_t length = pattern_length(pattern, mask);
+
+    int shift = +1;
+    if(dir == backward)
+        shift = -1;
+    
+    if(start == nullptr) {
+        if(dir == forward)
+            start = begin();
+        else
+            start = end();
+    }
+
+    auto regs = regions();
+    if(dir == backward)
+        reverse(regs.begin(), regs.end());
+    auto region = lower_bound(
+        regs.begin(),
+        regs.end(),
+        start,
+        [](memory &region, pointer address) -> bool {
+            return region.has(address);
+        }
+    );
+    if(region == regs.end())
+        return nullptr;
+
+    if(dir == forward)
+        *region = memory(start, region->end());
+    else
+        *region = memory(region->begin(), start);
+
+    for(; region != regs.end(); ++region) {
+        bool found = true;
+        pointer p;
+        pointer p_end;
+        if(dir == forward) {
+            p = region->begin();
+            p_end = region->end() - length;
+        } else {
+            p = region->end() - length;
+            p_end = region->begin();
+        }
+
+        while(true) {
+            for(; p != p_end; p += shift)
+                if((p.value<char>() & *mask) == *pattern)
+                    break;
+            if(p == p_end) {
+                found = false;
+                break;
+            }
+            if(pattern_matches(p + 1, pattern + 1, mask + 1))
+                break;
+            p += shift;
+        }
+
+        if(found)
+            return p;
+    }
+
+    return nullptr;
+}
+
+pointer memory::find_first_by_pattern(const char *pattern, const char *mask) {
+    return find_single_by_pattern(pattern, mask);
+}
+
+pointer memory::find_next_by_pattern(const char *pattern, const char *mask, pointer start) {
+    return find_single_by_pattern(pattern, mask, start);
+}
+                         
+pointer memory::find_prev_by_pattern(const char *pattern, const char *mask, pointer start) {
+    return find_single_by_pattern(pattern, mask, start, backward);
+}
+                         
+pointer memory::find_last_by_pattern(const char *pattern, const char *mask) {
+    return find_single_by_pattern(pattern, mask, nullptr, backward);
+}
+
 
 vector<pointer> memory::find_references(pointer ptr) {
     return find((char*)&ptr, ptr.size());
@@ -221,7 +356,7 @@ vector<pointer> memory::find_last_reference(vector<pointer> ptrs) {
 }
 
 vector<pointer> memory::find_call_references(pointer func) {
-    const unsigned char asm_instr_call = 0xE8;
+    const byte asm_instr_call = 0xE8;
 
     vector<pointer> matches;
 
@@ -230,14 +365,14 @@ vector<pointer> memory::find_call_references(pointer func) {
 
         while(true) {
             for(; p < region.end(); ++p)
-                if(p.value<unsigned char>() == asm_instr_call)
+                if(p.value<byte>() == asm_instr_call)
                     break;
             if(p == region.end()) {
                 break;
             }
             ++p;
             if(p.value<intptr_t>() == func - p - 5 + 1) { // CALL dest - (src + 5)
-                matches.emplace_back(p);
+                matches.emplace_back(p - 1);
             }
         }
     }
@@ -284,4 +419,36 @@ bool memory::is_valid_address(pointer ptr, size_t size) {
         return is_valid_address(reg_end, ptr_end - reg_end);
 
     return true;
+}
+
+size_t memory::pattern_length(const char *pattern, const char *mask) {
+    size_t length = 0;
+    while(*pattern != '\x00' || *mask != '\x00') {
+        length++;
+        pattern++;
+        mask++;
+    }
+    return length;
+}
+
+bool memory::pattern_matches(const char *data, const char *pattern, const char *mask) {
+    for(; *pattern != '\x00' || *mask != '\x00'; data++, pattern++, mask++)
+        if((*data & *mask) != *pattern)
+            return false;
+    return true;
+}
+
+void memory::redirect_call(pointer dest, pointer src) {
+    const byte asm_instr_call = 0xE8;
+
+    if(src.value<byte>() != asm_instr_call) {
+        throw runtime_error("source is not 'call' instruction");
+    }
+
+    ++src;
+
+    DWORD old_prot;
+    src.protect(sizeof(pointer), PAGE_EXECUTE_READWRITE, &old_prot);
+    src << (dest - src - 5);
+    src.protect(sizeof(pointer), old_prot);
 }

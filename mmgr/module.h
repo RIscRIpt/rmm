@@ -10,7 +10,6 @@
 namespace mmgr {
 
     using std::string;
-    using std::vector;
 
     class module : public memory {
     public:

@@ -26,7 +26,7 @@ namespace mmgr {
         pointer(uintptr_t pointer = 0);
         pointer(void* pointer);
 
-        DWORD protect(size_t size, DWORD new_prot, DWORD *old_prot = nullptr);
+        DWORD protect(size_t size, DWORD new_prot, DWORD *old_prot = nullptr) throw(runtime_error);
 
         bool is_valid() const;
 
@@ -58,6 +58,8 @@ namespace mmgr {
         inline pointer operator--(int) { return ptr--; }
         inline pointer operator++() { return ++ptr; }
         inline pointer operator++(int) { return ptr++; }
+
+        inline bool operator==(nullptr_t rhs) const { return ptr == 0; }
 
         template<
             typename T,
