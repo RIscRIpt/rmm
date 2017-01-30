@@ -119,7 +119,7 @@ pointer memory::find_single(const char *data, size_t length, pointer start, dire
         regs.end(),
         start,
         [](memory &region, pointer address) -> bool {
-            return region.has(address);
+            return region.end() <= address;
         }
     );
     if(region == regs.end())
@@ -203,7 +203,7 @@ vector<pointer> memory::find_by_pattern(const char *pattern, const char *mask) {
         mask++;
         pattern++;
     }
-    if(*pattern == '\x00' && *mask == '\x00')
+    if(*pattern == '\x00' && *mask != '\xFF')
         return matches;
     length = pattern_length(pattern, mask);
 
@@ -212,7 +212,7 @@ vector<pointer> memory::find_by_pattern(const char *pattern, const char *mask) {
 
         while(true) {
             for(; p < region.end(); ++p)
-                if((p.value<char>() & *mask) == *pattern)
+                if(p.value<char>() == *pattern)
                     break;
             if(p + length >= region.end()) {
                 break;
@@ -233,7 +233,7 @@ pointer memory::find_single_by_pattern(const char *pattern, const char *mask, po
         mask++;
         pattern++;
     }
-    if(*pattern == '\x00' && *mask == '\x00')
+    if(*pattern == '\x00' && *mask != '\xFF')
         return nullptr;
     size_t length = pattern_length(pattern, mask);
 
@@ -256,7 +256,7 @@ pointer memory::find_single_by_pattern(const char *pattern, const char *mask, po
         regs.end(),
         start,
         [](memory &region, pointer address) -> bool {
-            return region.has(address);
+            return region.end() <= address;
         }
     );
     if(region == regs.end())
@@ -281,7 +281,7 @@ pointer memory::find_single_by_pattern(const char *pattern, const char *mask, po
 
         while(true) {
             for(; p != p_end; p += shift)
-                if((p.value<char>() & *mask) == *pattern)
+                if(p.value<char>() == *pattern)
                     break;
             if(p == p_end) {
                 found = false;
@@ -438,7 +438,7 @@ size_t memory::pattern_length(const char *pattern, const char *mask) {
 
 bool memory::pattern_matches(const char *data, const char *pattern, const char *mask) {
     for(; *pattern != '\x00' || *mask != '\x00'; data++, pattern++, mask++)
-        if((*data & *mask) != *pattern)
+        if((*data & *mask) != (*pattern & *mask))
             return false;
     return true;
 }
@@ -451,9 +451,5 @@ void memory::redirect_call(pointer dest, pointer src) {
     }
 
     ++src;
-
-    DWORD old_prot;
-    src.protect(sizeof(pointer), PAGE_EXECUTE_READWRITE, &old_prot);
-    src << (dest - src - 5);
-    src.protect(sizeof(pointer), old_prot);
+    src << (dest - src - 5 + 1);
 }

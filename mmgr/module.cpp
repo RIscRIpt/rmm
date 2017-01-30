@@ -58,6 +58,8 @@ const map<string, shared_ptr<::mmgr::section>> module::sections() {
 }
 
 shared_ptr<::mmgr::section> module::section(const string &name) {
+    if(_sections.size() == 0)
+        sections(); // sections must be cached before searching any.
     auto sit = _sections.find(name);
     if(sit != _sections.end())
         return sit->second;
