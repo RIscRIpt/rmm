@@ -19,7 +19,7 @@ pointer::pointer(void *pointer) :
 DWORD pointer::protect(size_t size, DWORD new_prot, DWORD *old_prot) {
     DWORD dwOldProt;
     if(!VirtualProtect(*this, size, new_prot, &dwOldProt))
-        throw runtime_error("failed to change memory protection");
+        throw system_error(GetLastError(), std::system_category());
     if(old_prot != nullptr)
         *old_prot = dwOldProt;
     return dwOldProt;

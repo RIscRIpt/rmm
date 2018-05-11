@@ -5,10 +5,9 @@
 #include <algorithm>
 
 using namespace mmgr;
-using namespace std;
 
-const SYS_INFO memory::sys_info = [] {
-    SYS_INFO sys_info;
+const SYSTEM_INFO memory::sys_info = [] {
+    SYSTEM_INFO sys_info;
     GetSystemInfo(&sys_info);
     return sys_info;
 }(); 
@@ -28,9 +27,9 @@ memory::memory(pointer begin, pointer end, bool continuous) :
 {
 }
 
-vector<memory> memory::regions() {
-    MEM_INFO mi;
-    vector<memory> regions;
+std::vector<memory> memory::regions() const {
+    MEMORY_BASIC_INFORMATION mi;
+    std::vector<memory> regions;
 
     auto min_ptr = begin();
     if(min_ptr < sys_info.lpMinimumApplicationAddress)
@@ -60,24 +59,8 @@ vector<memory> memory::regions() {
     return regions;
 }
 
-inline pointer memory::begin() const {
-    return _begin;
-}
-
-inline pointer memory::end() const {
-    return _end;
-}
-
-inline bool memory::continuous() const {
-    return _continuous;
-}
-
-inline bool memory::has(pointer address) const {
-    return _begin <= address && address < _end;
-}
-
-vector<pointer> memory::find(const char *data, size_t length) {
-    vector<pointer> matches;
+std::vector<pointer> memory::find(const char *data, size_t length) const {
+    std::vector<pointer> matches;
 
     for(auto &&region : regions()) {
         auto p = region.begin();
@@ -99,7 +82,11 @@ vector<pointer> memory::find(const char *data, size_t length) {
     return matches;
 }
 
-pointer memory::find_single(const char *data, size_t length, pointer start, direction dir) {
+std::vector<pointer> memory::find(const std::string &str) const {
+    return find(str.c_str(), str.length() + 1);
+}
+
+pointer memory::find_single(const char *data, size_t length, pointer start, search_direction dir) const {
     int shift = +1;
     if(dir == backward)
         shift = -1;
@@ -114,7 +101,7 @@ pointer memory::find_single(const char *data, size_t length, pointer start, dire
     auto regs = regions();
     if(dir == backward)
         reverse(regs.begin(), regs.end());
-    auto region = lower_bound(
+    auto region = std::lower_bound(
         regs.begin(),
         regs.end(),
         start,
@@ -162,41 +149,41 @@ pointer memory::find_single(const char *data, size_t length, pointer start, dire
     return nullptr;
 }
 
-pointer memory::find_first(const char *data, size_t length) {
+pointer memory::find_first(const char *data, size_t length) const {
     return find_single(data, length);
 }
 
-pointer memory::find_first(const string &str) {
+pointer memory::find_first(const std::string &str) const {
     return find_first(str.c_str(), str.length());
 }
 
-pointer memory::find_next(const char *data, size_t length, pointer start) {
+pointer memory::find_next(const char *data, size_t length, pointer start) const {
     return find_single(data, length, start, forward);
 }
 
-pointer memory::find_next(const string &str, pointer start) {
+pointer memory::find_next(const std::string &str, pointer start) const {
     return find_next(str.c_str(), str.length(), start);
 }
 
-pointer memory::find_prev(const char *data, size_t length, pointer start) {
+pointer memory::find_prev(const char *data, size_t length, pointer start) const {
     return find_single(data, length, start, backward);
 }
 
-pointer memory::find_prev(const string &str, pointer start) {
+pointer memory::find_prev(const std::string &str, pointer start) const {
     return find_prev(str.c_str(), str.length(), start);
 }
 
-pointer memory::find_last(const char *data, size_t length) {
+pointer memory::find_last(const char *data, size_t length) const {
     return find_single(data, length, nullptr, backward);
 }
 
-pointer memory::find_last(const string &str) {
+pointer memory::find_last(const std::string &str) const {
     return find_last(str.c_str(), str.length());
 }
 
-vector<pointer> memory::find_by_pattern(const char *pattern, const char *mask) {
+std::vector<pointer> memory::find_by_pattern(const char *pattern, const char *mask) const {
     size_t length;
-    vector<pointer> matches;
+    std::vector<pointer> matches;
 
     // fix dummy mask (if it begins with 00's)
     while(*mask == '\x00' && *pattern != '\x00') {
@@ -227,7 +214,7 @@ vector<pointer> memory::find_by_pattern(const char *pattern, const char *mask) {
     return matches;
 }
 
-pointer memory::find_single_by_pattern(const char *pattern, const char *mask, pointer start, direction dir) {
+pointer memory::find_single_by_pattern(const char *pattern, const char *mask, pointer start, search_direction dir) const {
     // fix dummy mask (if it begins with 00's)
     while(*mask == '\x00' && *pattern != '\x00') {
         mask++;
@@ -299,66 +286,66 @@ pointer memory::find_single_by_pattern(const char *pattern, const char *mask, po
     return nullptr;
 }
 
-pointer memory::find_first_by_pattern(const char *pattern, const char *mask) {
+pointer memory::find_first_by_pattern(const char *pattern, const char *mask) const {
     return find_single_by_pattern(pattern, mask);
 }
 
-pointer memory::find_next_by_pattern(const char *pattern, const char *mask, pointer start) {
+pointer memory::find_next_by_pattern(const char *pattern, const char *mask, pointer start) const {
     return find_single_by_pattern(pattern, mask, start);
 }
                          
-pointer memory::find_prev_by_pattern(const char *pattern, const char *mask, pointer start) {
+pointer memory::find_prev_by_pattern(const char *pattern, const char *mask, pointer start) const {
     return find_single_by_pattern(pattern, mask, start, backward);
 }
                          
-pointer memory::find_last_by_pattern(const char *pattern, const char *mask) {
+pointer memory::find_last_by_pattern(const char *pattern, const char *mask) const {
     return find_single_by_pattern(pattern, mask, nullptr, backward);
 }
 
 
-vector<pointer> memory::find_references(pointer ptr) {
+std::vector<pointer> memory::find_references(pointer ptr) const {
     return find((char*)&ptr, ptr.size());
 }
 
-pointer memory::find_first_reference(pointer ptr) {
+pointer memory::find_first_reference(pointer ptr) const {
     return find_first((char*)&ptr, ptr.size());
 }
 
-pointer memory::find_last_reference(pointer ptr) {
+pointer memory::find_last_reference(pointer ptr) const {
     return find_last((char*)&ptr, ptr.size());
 }
 
-vector<pointer> memory::find_references(vector<pointer> ptrs) {
-    vector<pointer> matches;
+std::vector<pointer> memory::find_references(std::vector<pointer> ptrs) const {
+    std::vector<pointer> matches;
     for(auto &&ptr : ptrs) {
         auto refs = find_references(ptr);
         matches.insert(
             matches.end(),
-            make_move_iterator(refs.begin()),
-            make_move_iterator(refs.end())
+            std::make_move_iterator(refs.begin()),
+            std::make_move_iterator(refs.end())
         );
     }
     return matches;
 }
 
-vector<pointer> memory::find_first_reference(vector<pointer> ptrs) {
-    vector<pointer> matches;
+std::vector<pointer> memory::find_first_reference(std::vector<pointer> ptrs) const {
+    std::vector<pointer> matches;
     for(auto &&ptr : ptrs)
         matches.push_back(find_first_reference(ptr));
     return matches;
 }
 
-vector<pointer> memory::find_last_reference(vector<pointer> ptrs) {
-    vector<pointer> matches;
+std::vector<pointer> memory::find_last_reference(std::vector<pointer> ptrs) const {
+    std::vector<pointer> matches;
     for(auto &&ptr : ptrs)
         matches.push_back(find_last_reference(ptr));
     return matches;
 }
 
-vector<pointer> memory::find_call_references(pointer func) {
+std::vector<pointer> memory::find_call_references(pointer func) const {
     const byte asm_instr_call = 0xE8;
 
-    vector<pointer> matches;
+    std::vector<pointer> matches;
 
     for(auto &&region : regions()) {
         auto p = region.begin();
@@ -380,21 +367,21 @@ vector<pointer> memory::find_call_references(pointer func) {
     return matches;
 }
 
-const map<string, shared_ptr<::mmgr::module>> mmgr::memory::modules() {
+const std::map<std::string, std::shared_ptr<::mmgr::module>> memory::modules() const {
     //TODO: enumerate all modules, and save into _modules
     return _modules;
 }
 
-shared_ptr<::mmgr::module> memory::module(const string &name) {
+std::shared_ptr<::mmgr::module> memory::module(const std::string &name) {
     auto mit = _modules.find(name);
     if(mit != _modules.end())
         return mit->second;
 
-    auto m = make_shared<::module>(name);
+    auto m = std::make_shared<::module>(name);
     if(!m->is_valid())
         return nullptr;
 
-    _modules[name] = m;
+    _modules.emplace(name, m);
     return m;
 }
 
@@ -402,12 +389,12 @@ void memory::clean_modules() {
     _modules.clear();
 }
 
-shared_ptr<::mmgr::module> memory::operator[](const string &name) {
+std::shared_ptr<::mmgr::module> memory::operator[](const std::string &name) {
     return module(name);
 }
 
 bool memory::is_valid_address(pointer ptr, size_t size) {
-    MEM_INFO mi;
+    MEMORY_BASIC_INFORMATION mi;
 
     if(VirtualQuery(ptr, &mi, sizeof(mi)) == 0)
         return false;
@@ -447,9 +434,9 @@ void memory::redirect_call(pointer dest, pointer src) {
     const byte asm_instr_call = 0xE8;
 
     if(src.value<byte>() != asm_instr_call) {
-        throw runtime_error("source is not 'call' instruction");
+        throw std::runtime_error("source is not 'call' instruction");
     }
 
     ++src;
-    src << (dest - src - 5 + 1);
+    src << DWORD(dest - src - 5 + 1);
 }

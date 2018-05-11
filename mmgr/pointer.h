@@ -4,14 +4,10 @@
 
 #include "typedefs.h"
 
+#include <type_traits>
 #include <stdexcept>
 
 namespace mmgr {
-
-    using std::runtime_error;
-    using std::enable_if;
-    using std::is_integral;
-    using std::is_same;
 
     /*
      * WARNING:
@@ -26,31 +22,31 @@ namespace mmgr {
         pointer(uintptr_t pointer = 0);
         pointer(void* pointer);
 
-        DWORD protect(size_t size, DWORD new_prot, DWORD *old_prot = nullptr) throw(runtime_error);
+        DWORD protect(size_t size, DWORD new_prot, DWORD *old_prot = nullptr);
 
         bool is_valid() const;
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T>, T>
         >
             inline pointer operator+(T offset) const { return ptr + offset; }
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T>, T>
         >
             inline pointer operator-(T offset) const { return ptr - offset; }
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T>, T>
         >
             inline pointer operator+=(T offset) { return ptr += offset; }
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T>, T>
         >
             inline pointer operator-=(T offset) { return ptr -= offset; }
 
@@ -63,49 +59,49 @@ namespace mmgr {
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value || is_same<T, pointer>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T> || std::is_same_v<T, pointer>, T>
         >
             inline bool operator==(T rhs) const { return ptr == rhs; }
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value || is_same<T, pointer>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T> || std::is_same_v<T, pointer>, T>
         >
             inline bool operator!=(T rhs) const { return ptr != rhs; }
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value || is_same<T, pointer>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T> || std::is_same_v<T, pointer>, T>
         >
             inline bool operator<(T rhs) const { return ptr < rhs; }
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value || is_same<T, pointer>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T> || std::is_same_v<T, pointer>::value, T>
         >
             inline bool operator>(T rhs) const { return ptr > rhs; }
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value || is_same<T, pointer>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T> || std::is_same<T, pointer>, T>
         >
             inline bool operator<=(T rhs) const { return ptr <= rhs; }
 
         template<
             typename T,
-            typename = typename enable_if<is_integral<T>::value || is_same<T, pointer>::value, T>::type
+            typename = typename std::enable_if_t<std::is_integral_v<T> || std::is_same<T, pointer>, T>
         >
             inline bool operator>=(T rhs) const { return ptr >= rhs; }
 
-        pointer operator*() const throw(runtime_error);
+        pointer operator*() const;
 
         inline operator uintptr_t() const { return ptr; }
 
         template<typename T>
-        inline operator T*() const;
+        inline operator T*() const { return (T*)ptr; }
 
         template<typename T>
-        inline pointer operator<<(const T src) {
+        inline pointer operator<<(const T &src) {
             auto old_prot = protect(sizeof(T), PAGE_EXECUTE_READWRITE);
             *(T*)ptr = src;
             protect(sizeof(T), old_prot);
@@ -121,17 +117,11 @@ namespace mmgr {
         template<typename T>
         inline T& value() const { return *(T*)ptr; }
 
-        static const size_t size() { return sizeof(uintptr_t); }
+        static constexpr size_t size() { return sizeof(uintptr_t); }
 
     private:
         uintptr_t ptr;
-
     };
-
-    template<typename T>
-    inline pointer::operator T*() const {
-        return (T*)ptr;
-    }
 
     template<>
     inline pointer::operator void*() const {

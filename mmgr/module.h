@@ -11,27 +11,23 @@
 
 namespace mmgr {
 
-    using std::string;
-    using std::map;
-    using std::shared_ptr;
-
     class module : public memory {
     public:
-        module(const string &name);
+        module(const std::string &name);
 
-        bool is_valid();
+        bool is_valid() const;
 
-        const map<string, shared_ptr<::mmgr::section>> sections();
-        shared_ptr<::mmgr::section> section(const string &name);
+        const std::map<std::string, std::shared_ptr<::mmgr::section>> sections();
+        std::shared_ptr<::mmgr::section> section(const std::string &name);
 
         void clean_sections();
 
-        shared_ptr<::mmgr::section> operator[](const string &name);
+        std::shared_ptr<::mmgr::section> operator[](const std::string &name);
 
-        const string name;
+        const std::string name;
     
     private:
-        map<string, shared_ptr<::mmgr::section>> _sections;
+        std::map<std::string, std::shared_ptr<::mmgr::section>> _sections;
     };
 
 }

@@ -3,17 +3,20 @@
 #include <Windows.h>
 #include <Psapi.h>
 
-#include <iostream>
-
-using namespace std;
 using namespace mmgr;
 
-module::module(const string &name) :
+module::module(const std::string &name) :
     name(name)
 {
     MODULEINFO info;
 
     auto hModule = GetModuleHandleA(name.c_str());
+    if (!hModule) {
+        _begin = nullptr;
+        _end = nullptr;
+        _continuous = false;
+        return;
+    }
     auto result = GetModuleInformation(
         GetCurrentProcess(),
         hModule,
@@ -23,24 +26,26 @@ module::module(const string &name) :
     if(!result) {
         _begin = nullptr;
         _end = nullptr;
+        _continuous = false;
         return;
     }
 
     _begin = info.lpBaseOfDll;
     _end = _begin + info.SizeOfImage;
+    _continuous = true;
 }
 
-bool module::is_valid() {
+bool module::is_valid() const {
     return begin() != 0 && end() != 0;
 }
 
-const map<string, shared_ptr<::mmgr::section>> module::sections() {
+const std::map<std::string, std::shared_ptr<::mmgr::section>> module::sections() {
     if(_sections.size() == 0) {
-        IMAGE_DOS_HEADER *dosHeader = _begin;
+        IMAGE_DOS_HEADER *dosHeader = begin();
         if(!memory::is_valid_address(dosHeader, sizeof(IMAGE_DOS_HEADER)))
             return _sections;
 
-        IMAGE_NT_HEADERS *ntHeaders = _begin + dosHeader->e_lfanew;
+        IMAGE_NT_HEADERS *ntHeaders = begin() + dosHeader->e_lfanew;
         if(!memory::is_valid_address(ntHeaders, sizeof(IMAGE_NT_HEADERS)))
             return _sections;
 
@@ -50,14 +55,14 @@ const map<string, shared_ptr<::mmgr::section>> module::sections() {
 
         for(int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++) {
             auto &header = sections[i];
-            auto s = make_shared<::mmgr::section>(_begin, header);
-            _sections[s->name] = move(s);
+            auto s = std::make_shared<::mmgr::section>(begin(), header);
+            _sections.emplace(s->name, std::move(s));
         }
     }
     return _sections;
 }
 
-shared_ptr<::mmgr::section> module::section(const string &name) {
+std::shared_ptr<::mmgr::section> module::section(const std::string &name) {
     if(_sections.size() == 0)
         sections(); // sections must be cached before searching any.
     auto sit = _sections.find(name);
@@ -70,6 +75,6 @@ void module::clean_sections() {
     _sections.clear();
 }
 
-shared_ptr<::mmgr::section> module::operator[](const string &name) {
+std::shared_ptr<::mmgr::section> module::operator[](const std::string &name) {
     return section(name);
 }
