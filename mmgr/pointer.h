@@ -23,6 +23,7 @@ namespace mmgr {
         pointer(void* pointer);
 
         DWORD protect(size_t size, DWORD new_prot, DWORD *old_prot = nullptr);
+        DWORD get_protection() const;
 
         bool is_valid() const;
 

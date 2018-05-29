@@ -5,7 +5,6 @@
 
 #include <iostream>
 
-using namespace std;
 using namespace mmgr;
 
 pointer::pointer(uintptr_t ptr) :
@@ -19,10 +18,14 @@ pointer::pointer(void *pointer) :
 DWORD pointer::protect(size_t size, DWORD new_prot, DWORD *old_prot) {
     DWORD dwOldProt;
     if(!VirtualProtect(*this, size, new_prot, &dwOldProt))
-        throw system_error(GetLastError(), std::system_category());
+        throw std::system_error(GetLastError(), std::system_category());
     if(old_prot != nullptr)
         *old_prot = dwOldProt;
     return dwOldProt;
+}
+
+DWORD pointer::get_protection() const {
+    return memory::get_protection(*this);
 }
 
 bool pointer::is_valid() const {
@@ -31,6 +34,6 @@ bool pointer::is_valid() const {
 
 pointer pointer::operator*() const {
     if(!is_valid())
-        throw runtime_error("invalid pointer");
+        throw std::runtime_error("invalid pointer");
     return *(uintptr_t*)ptr;
 }
