@@ -33,6 +33,7 @@ namespace mmgr {
 
         std::vector<pointer> find(const char *data, size_t length) const;
         std::vector<pointer> find(const std::string &str) const;
+        std::vector<pointer> find(const std::wstring &str) const;
 
         pointer find_single(const char *data, size_t length, pointer start = nullptr, search_direction dir = forward) const;
 
@@ -75,6 +76,7 @@ namespace mmgr {
         std::shared_ptr<::mmgr::module> operator[](const std::string &name);
 
         static bool is_valid_address(pointer ptr, size_t size = sizeof(pointer));
+        static DWORD get_protection(pointer ptr);
 
         static size_t pattern_length(const char *pattern, const char *mask);
         static bool pattern_matches(const char *data, const char *pattern, const char *mask);

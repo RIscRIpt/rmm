@@ -41,7 +41,7 @@ std::vector<memory> memory::regions() const {
 
     for(pointer base = min_ptr; base < max_ptr; ) {
         if(!VirtualQuery(base, &mi, sizeof(mi)))
-            throw nullptr;
+            throw std::system_error(GetLastError(), std::system_category());
 
         auto base_end = pointer(mi.BaseAddress) + mi.RegionSize;
         if(base_end > max_ptr)
@@ -84,6 +84,10 @@ std::vector<pointer> memory::find(const char *data, size_t length) const {
 
 std::vector<pointer> memory::find(const std::string &str) const {
     return find(str.c_str(), str.length() + 1);
+}
+
+std::vector<pointer> memory::find(const std::wstring &str) const {
+    return find(reinterpret_cast<const char*>(str.c_str()), (str.length() + 1) * 2);
 }
 
 pointer memory::find_single(const char *data, size_t length, pointer start, search_direction dir) const {
@@ -411,6 +415,13 @@ bool memory::is_valid_address(pointer ptr, size_t size) {
         return is_valid_address(reg_end, ptr_end - reg_end);
 
     return true;
+}
+
+DWORD memory::get_protection(pointer ptr) {
+    MEMORY_BASIC_INFORMATION mi;
+    if (!VirtualQuery(ptr, &mi, sizeof(mi)))
+        throw std::system_error(GetLastError(), std::system_category());
+    return mi.Protect;
 }
 
 size_t memory::pattern_length(const char *pattern, const char *mask) {
