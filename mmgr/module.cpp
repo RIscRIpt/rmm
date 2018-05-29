@@ -39,7 +39,7 @@ bool module::is_valid() const {
     return begin() != 0 && end() != 0;
 }
 
-const std::map<std::string, std::shared_ptr<::mmgr::section>> module::sections() {
+const std::map<std::string, ::mmgr::section>& module::sections() {
     if(_sections.size() == 0) {
         IMAGE_DOS_HEADER *dosHeader = begin();
         if(!memory::is_valid_address(dosHeader, sizeof(IMAGE_DOS_HEADER)))
@@ -55,19 +55,19 @@ const std::map<std::string, std::shared_ptr<::mmgr::section>> module::sections()
 
         for(int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++) {
             auto &header = sections[i];
-            auto s = std::make_shared<::mmgr::section>(begin(), header);
-            _sections.emplace(s->name, std::move(s));
+            auto s = ::mmgr::section(begin(), header);
+            _sections.emplace(s.name, std::move(s));
         }
     }
     return _sections;
 }
 
-std::shared_ptr<::mmgr::section> module::section(const std::string &name) {
+const ::mmgr::section* module::section(const std::string &name) {
     if(_sections.size() == 0)
         sections(); // sections must be cached before searching any.
     auto sit = _sections.find(name);
     if(sit != _sections.end())
-        return sit->second;
+        return &sit->second;
     return nullptr;
 }
 
@@ -75,6 +75,6 @@ void module::clean_sections() {
     _sections.clear();
 }
 
-std::shared_ptr<::mmgr::section> module::operator[](const std::string &name) {
+const ::mmgr::section* module::operator[](const std::string &name) {
     return section(name);
 }
