@@ -60,7 +60,7 @@ std::vector<memory> memory::regions() const {
     return regions;
 }
 
-pointer memory::find_single_in_region(const memory &region, const char *data, size_t length, uintptr_t offset, search_direction dir) {
+pointer memory::find_single_in_region(const memory &region, const char *data, size_t length, uintptr_t offset, search_direction direction) {
     if (!region.continuous())
         throw std::runtime_error("region is not continuous");
 
@@ -72,7 +72,7 @@ pointer memory::find_single_in_region(const memory &region, const char *data, si
         throw std::system_error(GetLastError(), std::system_category());
 
     std::vector<char>::iterator it;
-    if (dir != backward) {
+    if (direction != backward) {
         it = std::search(mem.begin(), mem.end(), data, data + length);
     } else {
         it = std::find_end(mem.begin(), mem.end(), data, data + length);
@@ -83,7 +83,7 @@ pointer memory::find_single_in_region(const memory &region, const char *data, si
     return region.begin() + offset + (it - mem.begin());
 }
 
-pointer memory::find_single_in_region_by_pattern(const memory &region, const char *pattern, const char *mask, uintptr_t offset, search_direction dir) {
+pointer memory::find_single_in_region_by_pattern(const memory &region, const char *pattern, const char *mask, uintptr_t offset, search_direction direction) {
     if (!region.continuous())
         throw std::runtime_error("region is not continuous");
 
@@ -105,7 +105,7 @@ pointer memory::find_single_in_region_by_pattern(const memory &region, const cha
 
     int shift;
     char *p, *p_end;
-    if (dir != backward) {
+    if (direction != backward) {
         shift = +1;
         p = mem.data();
         p_end = mem.data() + mem.size() - length + 1;
@@ -146,9 +146,9 @@ std::vector<pointer> memory::find(const char *data, size_t length) const {
     return matches;
 }
 
-pointer memory::find_single(const char *data, size_t length, uintptr_t start, search_direction dir) const {
+pointer memory::find_single(const char *data, size_t length, uintptr_t start, search_direction direction) const {
     if (start == 0) {
-        if (dir != backward)
+        if (direction != backward)
             start = _begin;
         else
             start = _end;
@@ -158,7 +158,7 @@ pointer memory::find_single(const char *data, size_t length, uintptr_t start, se
 
     decltype(all_regions)::iterator region;
     std::function<bool(const memory &region, uintptr_t start)> comp;
-    if (dir != backward) {
+    if (direction != backward) {
         comp = [](const memory &region, uintptr_t start) -> bool {
             return region.end() <= start;
         };
@@ -178,16 +178,16 @@ pointer memory::find_single(const char *data, size_t length, uintptr_t start, se
         return pointer(_process, nullptr);
 
     // all_regions returns temp vector of memory regions, so we can safely edit it.
-    if(dir != backward)
+    if(direction != backward)
         *region = memory(_process, start, region->end(), true);
     else
         *region = memory(_process, region->begin(), start, true);
 
     while (true) {
-        auto p = find_single_in_region(*region, data, length, 0, dir);
+        auto p = find_single_in_region(*region, data, length, 0, direction);
         if (p != nullptr)
             return p;
-        if (dir != backward) {
+        if (direction != backward) {
             region++;
             if (region == all_regions.end())
                 break;
@@ -217,6 +217,54 @@ pointer memory::find_last(const char *data, size_t length) const {
     return find_single(data, length, pointer(_process, nullptr), backward);
 }
 
+std::vector<pointer> memory::find(const std::string &data) const {
+    return find(data.c_str(), data.length() + 1);
+}
+
+pointer memory::find_single(const std::string &data, uintptr_t start, search_direction direction) const {
+    return find_single(data.c_str(), data.length() + 1, start, direction);
+}
+
+pointer memory::find_first(const std::string &data) const {
+    return find_first(data.c_str(), data.length() + 1);
+}
+
+pointer memory::find_next(const std::string &data, uintptr_t start) const {
+    return find_next(data.c_str(), data.length() + 1, start);
+}
+
+pointer memory::find_prev(const std::string &data, uintptr_t start) const {
+    return find_prev(data.c_str(), data.length() + 1, start);
+}
+
+pointer memory::find_last(const std::string &data) const {
+    return find_last(data.c_str(), data.length() + 1);
+}
+
+std::vector<pointer> memory::find(const std::wstring &data) const {
+    return find((char*)data.c_str(), data.length() * 2 + 2);
+}
+
+pointer memory::find_single(const std::wstring &data, uintptr_t start, search_direction direction) const {
+    return find_single((char*)data.c_str(), data.length() * 2 + 2, start, direction);
+}
+
+pointer memory::find_first(const std::wstring &data) const {
+    return find_first((char*)data.c_str(), data.length() * 2 + 2);
+}
+
+pointer memory::find_next(const std::wstring &data, uintptr_t start) const {
+    return find_next((char*)data.c_str(), data.length() * 2 + 2, start);
+}
+
+pointer memory::find_prev(const std::wstring &data, uintptr_t start) const {
+    return find_prev((char*)data.c_str(), data.length() * 2 + 2, start);
+}
+
+pointer memory::find_last(const std::wstring &data) const {
+    return find_last((char*)data.c_str(), data.length() * 2 + 2);
+}
+
 std::vector<pointer> memory::find_by_pattern(const char *pattern, const char *mask) const {
     std::vector<pointer> matches;
 
@@ -233,9 +281,9 @@ std::vector<pointer> memory::find_by_pattern(const char *pattern, const char *ma
     return matches;
 }
 
-pointer memory::find_single_by_pattern(const char *pattern, const char *mask, uintptr_t start, search_direction dir) const {
+pointer memory::find_single_by_pattern(const char *pattern, const char *mask, uintptr_t start, search_direction direction) const {
     if (start == 0) {
-        if (dir != backward)
+        if (direction != backward)
             start = _begin;
         else
             start = _end;
@@ -245,7 +293,7 @@ pointer memory::find_single_by_pattern(const char *pattern, const char *mask, ui
 
     decltype(all_regions)::iterator region;
     std::function<bool(const memory &region, uintptr_t start)> comp;
-    if (dir != backward) {
+    if (direction != backward) {
         comp = [](const memory &region, uintptr_t start) -> bool {
             return region.end() <= start;
         };
@@ -265,7 +313,7 @@ pointer memory::find_single_by_pattern(const char *pattern, const char *mask, ui
         return pointer(_process, nullptr);
 
     // all_regions returns temp vector of memory regions, so we can safely edit it.
-    if(dir != backward)
+    if(direction != backward)
         *region = memory(_process, start, region->end(), true);
     else
         *region = memory(_process, region->begin(), start, true);
@@ -274,7 +322,7 @@ pointer memory::find_single_by_pattern(const char *pattern, const char *mask, ui
         auto p = find_single_in_region_by_pattern(*region, pattern, mask);
         if (p != nullptr)
             return p;
-        if (dir != backward) {
+        if (direction != backward) {
             region++;
             if (region == all_regions.end())
                 break;
