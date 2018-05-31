@@ -214,7 +214,7 @@ pointer memory::find_prev(const char *data, size_t length, uintptr_t start) cons
 }
 
 pointer memory::find_last(const char *data, size_t length) const {
-    return find_single(data, length, pointer(_process, nullptr), backward);
+    return find_single(data, length, 0, backward);
 }
 
 std::vector<pointer> memory::find(const std::string &data) const {
