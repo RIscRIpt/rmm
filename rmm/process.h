@@ -1,9 +1,11 @@
 #pragma once
 
 #include "memory.h"
+#include "module.h"
 
 #include <Windows.h>
 
+#include <unordered_map>
 #include <filesystem>
 
 namespace rmm {
@@ -17,6 +19,15 @@ namespace rmm {
 
         process(const std::wstring &name);
         ~process();
+
+        std::unordered_map<std::wstring, ::rmm::module> modules();
+        ::rmm::module& module(const std::wstring &name);
+        ::rmm::module& operator[](const std::wstring &name);
+
+        void clear_modules();
+        
+    protected:
+        std::unordered_map<std::wstring, ::rmm::module> _modules;
     };
 
 }

@@ -393,14 +393,6 @@ std::vector<pointer> memory::find_call_references(uintptr_t func) const {
     return matches;
 }
 
-module memory::module(const std::wstring &name) {
-    return ::rmm::module(_process, name);
-}
-
-module memory::operator[](const std::wstring &name) {
-    return ::rmm::module(_process, name);
-}
-
 bool memory::is_valid_address(uintptr_t ptr, size_t size) {
     MEMORY_BASIC_INFORMATION mi;
 

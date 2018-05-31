@@ -40,6 +40,11 @@ module::module(HANDLE process, const std::wstring &name)
     _continuous = true;
 }
 
+module::module(HANDLE process, const std::wstring & name, uintptr_t begin, uintptr_t end)
+    : memory(process, begin, end, true)
+    , name(name)
+{}
+
 bool module::is_valid() const {
     return begin() != 0 && end() != 0;
 }
@@ -79,8 +84,9 @@ const ::rmm::section* module::section(const std::string &name) {
     if(_sections.size() == 0)
         sections(); // sections must be cached before searching any.
     auto sit = _sections.find(name);
-    if(sit != _sections.end())
+    if (sit != _sections.end()) {
         return &sit->second;
+    }
     return nullptr;
 }
 

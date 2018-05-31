@@ -7,8 +7,6 @@
 
 #include <string>
 #include <vector>
-#include <map>
-#include <memory>
 
 namespace rmm {
 
@@ -70,9 +68,6 @@ namespace rmm {
         std::vector<pointer> find_call_references(uintptr_t func) const;
 
         void redirect_call(uintptr_t dest, uintptr_t src);
-
-        ::rmm::module module(const std::wstring &name);
-        ::rmm::module operator[](const std::wstring &name);
 
         bool is_valid_address(uintptr_t ptr, size_t size = sizeof(uintptr_t));
         DWORD get_protection(uintptr_t ptr);

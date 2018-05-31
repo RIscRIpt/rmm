@@ -13,6 +13,7 @@ namespace rmm {
     class module : public memory {
     public:
         module(HANDLE process, const std::wstring &name);
+        module(HANDLE process, const std::wstring &name, uintptr_t begin, uintptr_t end);
 
         bool is_valid() const;
 
