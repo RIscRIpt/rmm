@@ -16,6 +16,7 @@ module::module(HANDLE process, const std::wstring &name)
 
     bool found = false;
     MODULEENTRY32 me;
+    me.dwSize = sizeof(me);
     if (!Module32First(hSnapshot, &me))
         throw std::system_error(GetLastError(), std::system_category());
     do {
