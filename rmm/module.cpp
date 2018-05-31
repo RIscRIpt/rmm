@@ -25,7 +25,7 @@ module::module(HANDLE process, const std::wstring &name)
             break;
         }
     } while (Module32Next(hSnapshot, &me));
-    if (GetLastError() != ERROR_NOT_FOUND)
+    if (GetLastError() != ERROR_NO_MORE_FILES)
         throw std::system_error(GetLastError(), std::system_category());
 
     if (!found) {

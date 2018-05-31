@@ -14,7 +14,6 @@ namespace rmm {
     public:
         section(pointer module_base, const IMAGE_SECTION_HEADER &header);
 
-        const IMAGE_SECTION_HEADER &header;
         const std::string name;
     };
 

@@ -25,7 +25,7 @@ HANDLE process::open_by_name(const std::wstring &name) {
             }
         }
     } while (Process32Next(hSnapshot, &pe));
-    if (GetLastError() != ERROR_NOT_FOUND)
+    if (GetLastError() != ERROR_NO_MORE_FILES)
         throw std::system_error(GetLastError(), std::system_category());
 
     if (pid == -1)

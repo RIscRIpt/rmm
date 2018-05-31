@@ -202,7 +202,7 @@ pointer memory::find_single(const char *data, size_t length, uintptr_t start, se
 }
 
 pointer memory::find_first(const char *data, size_t length) const {
-    return find_single(data, length, pointer(_process, nullptr));
+    return find_single(data, length);
 }
 
 pointer memory::find_next(const char *data, size_t length, uintptr_t start) const {
