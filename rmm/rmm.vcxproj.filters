@@ -13,6 +13,9 @@
     <Filter Include="section">
       <UniqueIdentifier>{55d7f02b-1453-454e-ac8b-d77e1fcdc7b3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="process">
+      <UniqueIdentifier>{4a75b8f5-d7a3-439e-aefe-a6cdbe64bcd1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="module.cpp">
@@ -26,6 +29,9 @@
     </ClCompile>
     <ClCompile Include="section.cpp">
       <Filter>section</Filter>
+    </ClCompile>
+    <ClCompile Include="process.cpp">
+      <Filter>process</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -41,6 +47,9 @@
     </ClInclude>
     <ClInclude Include="section.h">
       <Filter>section</Filter>
+    </ClInclude>
+    <ClInclude Include="process.h">
+      <Filter>process</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
