@@ -3,7 +3,7 @@
 #include <Windows.h>
 #include <Psapi.h>
 
-using namespace mmgr;
+using namespace rmm;
 
 section::section(pointer module_base, const IMAGE_SECTION_HEADER &header)
     : header(header)

@@ -2,36 +2,40 @@
 
 #include <Windows.h>
 #include <Psapi.h>
+#include <TlHelp32.h>
 
-using namespace mmgr;
+using namespace rmm;
 
-module::module(const std::string &name) :
-    name(name)
+module::module(HANDLE process, const std::wstring &name)
+    : memory(process)
+    , name(name)
 {
-    MODULEINFO info;
+    auto hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, GetProcessId(process));
+    if (!hSnapshot)
+        throw std::system_error(GetLastError(), std::system_category());
 
-    auto hModule = GetModuleHandleA(name.c_str());
-    if (!hModule) {
-        _begin = nullptr;
-        _end = nullptr;
+    bool found = false;
+    MODULEENTRY32 me;
+    if (!Module32First(hSnapshot, &me))
+        throw std::system_error(GetLastError(), std::system_category());
+    do {
+        if (name == me.szModule) {
+            found = true;
+            break;
+        }
+    } while (Module32Next(hSnapshot, &me));
+    if (GetLastError() != ERROR_NOT_FOUND)
+        throw std::system_error(GetLastError(), std::system_category());
+
+    if (!found) {
+        _begin = 0;
+        _end = 0;
         _continuous = false;
         return;
     }
-    auto result = GetModuleInformation(
-        GetCurrentProcess(),
-        hModule,
-        &info,
-        sizeof(info));
 
-    if(!result) {
-        _begin = nullptr;
-        _end = nullptr;
-        _continuous = false;
-        return;
-    }
-
-    _begin = info.lpBaseOfDll;
-    _end = _begin + info.SizeOfImage;
+    _begin = (uintptr_t)me.modBaseAddr;
+    _end = (uintptr_t)me.modBaseAddr + me.modBaseSize;
     _continuous = true;
 }
 
@@ -39,30 +43,38 @@ bool module::is_valid() const {
     return begin() != 0 && end() != 0;
 }
 
-const std::map<std::string, ::mmgr::section>& module::sections() {
+const std::map<std::string, ::rmm::section>& module::sections() {
     if(_sections.size() == 0) {
-        IMAGE_DOS_HEADER *dosHeader = begin();
-        if(!memory::is_valid_address(dosHeader, sizeof(IMAGE_DOS_HEADER)))
+        auto pDosHeader = begin();
+        if (!pDosHeader.is_valid(sizeof(IMAGE_DOS_HEADER)))
             return _sections;
 
-        IMAGE_NT_HEADERS *ntHeaders = begin() + dosHeader->e_lfanew;
-        if(!memory::is_valid_address(ntHeaders, sizeof(IMAGE_NT_HEADERS)))
+        IMAGE_DOS_HEADER dosHeader;
+        pDosHeader >> dosHeader;
+
+        auto pNtHeaders = begin() + dosHeader.e_lfanew;
+        if (!pNtHeaders.is_valid(sizeof(IMAGE_NT_HEADERS)))
             return _sections;
 
-        IMAGE_SECTION_HEADER *sections = IMAGE_FIRST_SECTION(ntHeaders);
-        if(!memory::is_valid_address(sections, sizeof(IMAGE_SECTION_HEADER) * ntHeaders->FileHeader.NumberOfSections))
+        IMAGE_NT_HEADERS ntHeaders;
+        pNtHeaders >> ntHeaders;
+
+        auto pSections = begin() + dosHeader.e_lfanew + FIELD_OFFSET(IMAGE_NT_HEADERS, OptionalHeader) + ntHeaders.FileHeader.SizeOfOptionalHeader;
+        if (!pSections.is_valid(sizeof(IMAGE_SECTION_HEADER) * ntHeaders.FileHeader.NumberOfSections))
             return _sections;
 
-        for(int i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++) {
+        std::vector<IMAGE_SECTION_HEADER> sections(ntHeaders.FileHeader.NumberOfSections);
+        for(int i = 0; i < ntHeaders.FileHeader.NumberOfSections; i++) {
+            (pSections + i * sizeof(IMAGE_SECTION_HEADER)) >> sections[i];
             auto &header = sections[i];
-            auto s = ::mmgr::section(begin(), header);
+            auto s = ::rmm::section(begin(), header);
             _sections.emplace(s.name, std::move(s));
         }
     }
     return _sections;
 }
 
-const ::mmgr::section* module::section(const std::string &name) {
+const ::rmm::section* module::section(const std::string &name) {
     if(_sections.size() == 0)
         sections(); // sections must be cached before searching any.
     auto sit = _sections.find(name);
@@ -75,6 +87,6 @@ void module::clean_sections() {
     _sections.clear();
 }
 
-const ::mmgr::section* module::operator[](const std::string &name) {
+const ::rmm::section* module::operator[](const std::string &name) {
     return section(name);
 }

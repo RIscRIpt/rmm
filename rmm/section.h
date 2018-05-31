@@ -8,7 +8,7 @@
 
 #include <string>
 
-namespace mmgr {
+namespace rmm {
 
     class section : public memory {
     public:

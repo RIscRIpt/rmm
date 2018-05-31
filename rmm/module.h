@@ -8,25 +8,25 @@
 #include <string>
 #include <map>
 
-namespace mmgr {
+namespace rmm {
 
     class module : public memory {
     public:
-        module(const std::string &name);
+        module(HANDLE process, const std::wstring &name);
 
         bool is_valid() const;
 
-        const std::map<std::string, ::mmgr::section>& sections();
-        const ::mmgr::section* section(const std::string &name);
+        const std::map<std::string, ::rmm::section>& sections();
+        const ::rmm::section* section(const std::string &name);
 
         void clean_sections();
 
-        const ::mmgr::section* operator[](const std::string &name);
+        const ::rmm::section* operator[](const std::string &name);
 
-        const std::string name;
+        const std::wstring name;
     
     private:
-        std::map<std::string, ::mmgr::section> _sections;
+        std::map<std::string, ::rmm::section> _sections;
     };
 
 }
